@@ -1,19 +1,11 @@
-import path from 'path';
-import { readdir } from 'fs/promises';
-import * as process from 'process';
-import { Dirent } from 'fs';
+import {Dirent} from "fs";
+import {readdir} from "fs/promises"
+import path from "path";
 
-type PathForDirType = string | Error;
 
-const pathForDir: PathForDirType = process.argv[2]
-    ? path.resolve(process.argv[2])
-    : new Error('The path to the file is not specified');
 
-const arr: string[] = [];
 
-const reformatStr = (str: string): string => {
-    if (typeof pathForDir !== 'string') throw new Error('The path to the file is not specified');
-
+export const formater = (str: string) => {
     const parsStr = path.parse(str);
     const count = parsStr.dir.match(/\\/g);
     if (count !== null) {
@@ -21,28 +13,31 @@ const reformatStr = (str: string): string => {
     } else {
         return 'NOT DATE';
     }
-};
+}
 
-const scanDir = async (pathDir: PathForDirType) => {
-    if (typeof pathDir !== 'string') return pathForDir;
-    const dir: Dirent[] = await readdir(pathDir, { encoding: 'utf8', withFileTypes: true, recursive: true });
-    for (const value in dir) {
-        if (typeof reformatStr(path.resolve(pathDir, dir[value].name)) === 'string')
-            arr.push(reformatStr(path.resolve(pathDir, dir[value].name)));
+export const collector = async (dir: string): Promise<string[]>  => {
 
-        if (dir[value].isDirectory()) {
-            await scanDir(path.resolve(pathDir, dir[value].name));
+    const arrStr: string[] = []
+    const scanner = async (pathCurrDir: string) => {
+        const dir: Dirent[] = await readdir(pathCurrDir, { encoding: 'utf8', withFileTypes: true, recursive: true })
+        for(const value in dir ) {
+            arrStr.push(formater(path.resolve(pathCurrDir, dir[value].name)))
+            if(dir[value].isDirectory()){
+                await scanner(path.resolve(pathCurrDir, dir[value].name))
+            }
         }
     }
-};
 
-export const createTree = (arr: string[]): string | Error => {
+    await scanner(path.resolve('./', dir))
+
+    return arrStr;
+}
+
+export const tree = (arr: string[]): string => {
     let str = '';
     arr.forEach((el) => {
         str += `${el}\n`;
     });
-    return str.length !== 0 ? str : new Error('The path to the file is not specified');
-};
+    return str;
 
-console.log('---START---');
-scanDir(pathForDir).then(r => {console.log(createTree(arr))}).then(r => console.log('---FINISH---'));
+}
